@@ -1,0 +1,15 @@
+
+library(shiny)
+library(DT)
+library(shinydashboard)
+library(tidyverse)
+library(dashboardthemes) # devtools::install_github("nik01010/dashboardthemes")
+library(readxl)
+library(shinyWidgets)
+library(shinyhelper)
+library(shinyBS)
+library(plotly)
+library(reactome.db) #to map reactome ids to terms
+library(AnnotationDbi)
+library(ComplexHeatmap)
+# library(simplifyEnrichment)
