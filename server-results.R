@@ -193,11 +193,12 @@ observe({
 }
 })
 
-#Main Heatmap with wordCloud annotation
+#Clustering
 cl <- reactive({
   simplifyEnrichment::cluster_terms(mat(), method = input$clust_method, control = list(), catch_error = FALSE, verbose = TRUE)
   })
 
+#Main Heatmap with wordCloud annotation
 hm <- reactive({
   if (is.null(input$min_term)) min_term = round(nrow(mat()) * 0.02) else min_term=input$min_term
   term_desc <- structure(as.character(db_annot_df1()$term), names = as.character(db_annot_df1()$id)) #named vector
@@ -214,6 +215,150 @@ output$hm <- renderPlot({hm()})
 #fem el dataframe
 df <- reactive({
   term_desc <- structure(as.character(db_annot_df1()$term), names = as.character(db_annot_df1()$id)) #named vector
-  data.frame(id = rownames(mat()), term = term_desc, cluster = cl(), stringsAsFactors = FALSE)
+  df <- data.frame(id = rownames(mat()), term = term_desc, cluster = cl(), stringsAsFactors = FALSE)
+  df <- left_join(df, db_annot_df1()[,c("id", "setSize")], by="id")
+  colnames(df) <- c("id", "term", "cluster", "setSizeDB")
+  return(df)
 })
 output$df <- DT::renderDataTable({DT::datatable(df(), options=list(pageLength=5, scrollX=TRUE))})
+
+#Main Heatmap with annotation 2
+df1 <- reactive({
+  if (is.null(input$min_term)) min_term = round(nrow(mat) * 0.02) else min_term=input$min_term
+  df1 <- df()
+  for (comp in names(lt())){
+    res <- listofres()[[comp]]
+    colnames(res)[-1] <- paste0( colnames(res)[-1], ".", comp)
+    df1 <- left_join(df1, res, by=c("id"=input$col_ID))
+  }
+  clusters <- sort(unique(df1$cluster))
+  
+  df1$cluster_annot_wordcloud <- NA
+  df1$cluster_annot_maxsetsize <- NA
+  if (input$annot_type=="annot_minpval") df1$cluster_annot_minpval <- NA
+
+  for (c in clusters){
+    df1_c <- df1 %>%
+      dplyr::filter(cluster==c)
+    #anotacio amb wordcloud
+    word_clouds_annotations <- count_word(df1_c$term)
+    words_f <- na.omit(word_clouds_annotations$word[1:input$num_words_wc])
+    df1[df1$cluster==c, "cluster_annot_wordcloud"] <- paste0(words_f, collapse=" ")
+    #anotacio amb term with min pval in any of comparisons
+    if (input$annot_type=="annot_minpval") {
+      cols_pval <- colnames(df1_c)[grepl(paste0("^",input$col_pval), colnames(df1_c))]
+      pval_min <- apply(df1_c[,cols_pval],1,min, na.rm=TRUE)
+      names(pval_min) <- df1_c$id
+      anot_minpval <- names(pval_min)[which.min(pval_min)]
+      anot_minpval1 <- as.character(df1_c[df1_c$id==anot_minpval,"term"])
+      df1[df1$cluster==c, "cluster_annot_minpval"] <- anot_minpval1
+    }
+    #anotacio amb terme de major setSize (sera probablement el mes generic)
+    anot_maxsetsize1 <- as.character(df1_c[which.max(df1_c$setSizeDB),"term"])
+    df1[df1$cluster==c, "cluster_annot_maxsetsize"] <- anot_maxsetsize1
+  }
+  if (input$annot_type!="none"){
+    #ordre del heatmap per tamany de cluster
+    order_by_size <- TRUE
+    cl = as.vector(cl())
+    cl_tb = table(cl)
+    cl[as.character(cl) %in% names(cl_tb[cl_tb < min_term])] = 0
+    cl = factor(cl, levels = c(setdiff(sort(cl), 0), 0))
+    if (order_by_size) {
+      cl = factor(cl, levels = c(setdiff(names(sort(table(cl),
+                                                    decreasing = TRUE)), 0), 0))
+    }
+    cl_annot_show <- paste0("cluster_",input$annot_type)
+    df1$cluster_show <- ifelse(df1$cluster%in%levels(cl),df1$cluster,0)
+    df1$cluster_show_names <- ifelse(df1$cluster_show==0, "other", df1[,cl_annot_show])
+  }
+  #reordenem columnes
+  cols_first <- c("id", "term", "cluster", "cluster_annot_wordcloud","cluster_annot_maxsetsize")
+  if (input$annot_type=="annot_minpval") cols_first <- c(cols_first, "cluster_annot_minpval")
+  if (input$annot_type!="none") cols_first <- c(cols_first, "cluster_show", "cluster_show_names")
+  df1 <- df1[,c(cols_first, colnames(df1)[!colnames(df1)%in%cols_first])]
+  df1 <- df1[order(df1$cluster),]
+  return(df1)
+})
+output$df1 <- DT::renderDataTable({DT::datatable(df1(), options=list(pageLength=5, scrollX=TRUE))})
+
+hm3 <- reactive({
+  req(input$annot_type!="none")
+  if (is.null(input$min_term)) min_term = round(nrow(mat) * 0.02) else min_term=input$min_term
+  df1 <- df1()
+  width_wrap <- 45
+  #ordre del heatmap per tamany de cluster
+  order_by_size <- TRUE
+  cl = as.vector(cl())
+  cl_tb = table(cl)
+  cl[as.character(cl) %in% names(cl_tb[cl_tb < min_term])] = 0
+  cl = factor(cl, levels = c(setdiff(sort(cl), 0), 0))
+  if (order_by_size) {
+    cl = factor(cl, levels = c(setdiff(names(sort(table(cl),
+                                                  decreasing = TRUE)), 0), 0))
+  }
+  od2 = unlist(lapply(levels(cl), function(le) {
+    l = cl == le
+    if (sum(l) <= 1) {
+      return(which(l))
+    }
+    else {
+      mm = mat()[l, l, drop = FALSE]
+      which(l)[hclust(stats::dist(mm))$order]
+    }
+  }))
+
+  #Anotacions (hm dret)
+  ann_col <- ggplotColours(nlevels(cl))
+  names(ann_col) <- as.character(sort(unique(cl)))
+
+  ann_cl <- df1$cluster_show_names
+  ann_cl <- stringr::str_wrap(ann_cl, width=width_wrap)
+
+  names(ann_cl) <- df1$cluster_show
+  ann_cl <- ann_cl[!duplicated(ann_cl)]
+  ann_cl <- ann_cl[names(ann_col)]
+
+  #Heatmaps
+  ##heatmap principal
+  col <- c("white", "red")
+  col_fun = circlize::colorRamp2(seq(0, quantile(mat(), 0.95), length = length(col)),
+                                 col)
+  hm1 = Heatmap(mat(), col = col_fun, name = "Similarity",
+                column_title = "", show_row_names = FALSE,
+                show_column_names = FALSE, show_row_dend = FALSE,
+                show_column_dend = FALSE, row_order = od2, column_order = od2,
+                border = "#404040", row_title = NULL, use_raster = TRUE) +
+    NULL
+  ##afegim heatmap anotacions dret
+  hm2 <- hm1 + Heatmap(as.character(cl),
+                       col = ann_col,
+                       width = unit(0.5, "cm"), heatmap_legend_param = list(title = "ClusterName",at = names(ann_cl), labels = ann_cl, fontsize=5),
+                       show_column_names = FALSE)
+
+  ##afegim heatmap comparacions esquerre
+  gap = unit(2, "pt")
+  ht_list <- ht()
+  if (!is.null(ht_list)) {
+    n = length(ht_list)
+    hm3 = ht_list + hm2
+    gap = unit.c(unit(rep(1, n), "mm"), gap)
+  }
+  hm3@ht_list[[1]]@heatmap_param$post_fun = function(ht) {
+    decorate_heatmap_body("Similarity", {
+      grid.rect(gp = gpar(fill = NA, col = "#404040"))
+      cl = factor(cl, levels = unique(cl[od2]))
+      tbcl = table(cl)
+      ncl = length(cl)
+      x = cumsum(c(0, tbcl))/ncl
+      grid.segments(x, 0, x, 1, default.units = "npc",
+                    gp = gpar(col = "#404040"))
+      grid.segments(0, 1 - x, 1, 1 - x, default.units = "npc",
+                    gp = gpar(col = "#404040"))
+    })
+  }
+  hm3 <- draw(hm3, main_heatmap = "Similarity", gap = gap)
+  return(hm3)
+})
+
+output$hm3 <- renderPlot({hm3()})

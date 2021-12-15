@@ -48,8 +48,15 @@ fluidRow(
          ),
          box(width=NULL, title="Plot Options", status="warning",
              numericInput("min_term", label="Minimum size of cluster names in heatmap", value=5, min=1),
+             textInput("col_val", label="Name of numeric column to highlight on left heatmap (eg. pvalue/p.adjust or none)", value="none"),
              numericInput("num_words_wc", label="Number of words for Word Cloud annotation", value=10, min=1),
-             textInput("col_val", label="Numeric column to highlight on left heatmap", value="none")
+             radioButtons("annot_type", "Annotate clusters with term with:",
+                          choices = c("Minimum p-value" = 'annot_minpval',
+                                      "Maximum set size" = 'annot_maxsetsize',
+                                      "None" = 'none'),
+                          selected = 'none'),
+             conditionalPanel(condition= ("input.annot_type=='annot_minpval'"), textInput("col_pval", label="Name of column corresponding to pvalue", value="pvalue"))
+             
          ),
          
   )
