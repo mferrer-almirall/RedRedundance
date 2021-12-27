@@ -15,7 +15,7 @@ fluidRow(
                     h4("Similarity matrix:"),br(),
                     DTOutput("mat")
                     ),
-           tabPanel("Heatmap_left", plotOutput("ht")),
+           # tabPanel("Heatmap_left", plotOutput("ht")),
            tabPanel("Cluster comparison", plotOutput("plot_clust_comparison1"), plotOutput("plot_clust_comparison2")),
            tabPanel("Heatmap_WordCloud", plotOutput("hm"), DTOutput("df")),
            tabPanel("Heatmap_Annot",plotOutput("hm3"), DTOutput("df1"))

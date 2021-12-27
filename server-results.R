@@ -241,7 +241,7 @@ df1 <- reactive({
     df1_c <- df1 %>%
       dplyr::filter(cluster==c)
     #anotacio amb wordcloud
-    word_clouds_annotations <- count_word(df1_c$term)
+    word_clouds_annotations <- simplifyEnrichment::count_word(df1_c$term)
     words_f <- na.omit(word_clouds_annotations$word[1:input$num_words_wc])
     df1[df1$cluster==c, "cluster_annot_wordcloud"] <- paste0(words_f, collapse=" ")
     #anotacio amb term with min pval in any of comparisons
