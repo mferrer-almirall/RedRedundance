@@ -1,21 +1,19 @@
-orgdb <- c(Anopheles="org.Ag.eg.db",
-           Arabidopsis="org.At.tair.db",
-           Bovine="org.Bt.eg.db",
-           Worm="org.Ce.eg.db",
+orgdb <- c(Human="org.Hs.eg.db",
+           Mouse="org.Mm.eg.db",
+           Rat="org.Rn.eg.db",
+           Pig="org.Ss.eg.db",
+           Chicken="org.Gg.eg.db",
+           Rhesus="org.Mmu.eg.db",
+           Chimp="org.Pt.eg.db",
            Canine="org.Cf.eg.db",
+           Bovine="org.Bt.eg.db",
+           Anopheles="org.Ag.eg.db",
+           Arabidopsis="org.At.tair.db",
+           Worm="org.Ce.eg.db",
            Fly="org.Dm.eg.db",
            Zebrafish="org.Dr.eg.db",
-           `E coli strain K12`="org.EcK12.eg.db",
-           `E coli strain Sakai`="org.EcSakai.eg.db",
-           Chicken="org.Gg.eg.db",
-           Human="org.Hs.eg.db",
-           Mouse="org.Mm.eg.db",
-           Rhesus="org.Mmu.eg.db",
            Malaria="org.Pf.plasmo.db",
-           Chimp="org.Pt.eg.db",
-           Rat="org.Rn.eg.db",
            Yeast="org.Sc.sgd.db",
-           Pig="org.Ss.eg.db",
            Xenopus="org.Xl.eg.db")
 
 fluidRow(
@@ -23,7 +21,8 @@ fluidRow(
   column(width = 3,
          box(width=NULL, title="General parameters", status="warning",
              selectInput("organism_annot", label="Organism", selected="org.Hs.eg.db",
-                         choices=orgdb[order(names(orgdb))]),
+                         # choices=orgdb[order(names(orgdb))]),
+             choices=orgdb),
              radioButtons("pathwDB", "Source of terms:",
                           choices = c("GO" = 'GO',
                                       "Reactome" = 'Reactome',
@@ -55,8 +54,11 @@ fluidRow(
                                       "Maximum set size" = 'annot_maxsetsize',
                                       "None" = 'none'),
                           selected = 'none'),
-             conditionalPanel(condition= ("input.annot_type=='annot_minpval'"), textInput("col_pval", label="Name of column corresponding to pvalue", value="pvalue"))
-             
+             conditionalPanel(condition= ("input.annot_type=='annot_minpval'"), textInput("col_pval", label="Name of column corresponding to pvalue", value="pvalue")),
+             selectInput("netw_clust_method", label="Network clustering method", selected="cluster_fast_greedy",
+                         choices=c("cluster_fast_greedy", "cluster_louvain", "cluster_edge_betweenness")),
+             selectInput("netw_layout", label="Network layout", selected="layout_nicely",
+                         choices=c("layout_nicely", "layout_with_fr", "layout_grid"))
          ),
          
   )

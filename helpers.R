@@ -13,3 +13,5 @@ library(reactome.db) #to map reactome ids to terms
 library(AnnotationDbi)
 library(ComplexHeatmap)
 # library(simplifyEnrichment)
+library(visNetwork)
+library(igraph)

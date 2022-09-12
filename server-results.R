@@ -2,7 +2,12 @@
 # observe_helpers(help_dir = "help_mds")
 
 observe({
-  library(input$organism_annot, character.only=TRUE)
+  # library(input$organism_annot, character.only=TRUE)
+  if (!require(input$organism_annot, character.only=TRUE, quietly = TRUE)) {
+    BiocManager::install(input$organism_annot, character.only=TRUE)
+    require(input$organism_annot, character.only=TRUE)
+  }
+  
 })
 
 
@@ -35,19 +40,19 @@ listofres.db1 <- reactive({
 })
 
 #dataframe d'anotacions (cada terme amb els gens q conte). Per combinat de dB, agafem els genes de cada database corresponent
-organism_sp_all <- c(org.Ag.eg.db="Anopheles gambiae",
+organism_sp_all <- c(org.Hs.eg.db="Homo sapiens",
+                     org.Mm.eg.db="Mus musculus",
+                     org.Rn.eg.db="Rattus norvegicus",
+                     org.Cf.eg.db="Canis familiaris",
+                     org.Ss.eg.db="Sus domesticus",
+                     org.Gg.eg.db="Gallus gallus domesticus",
+                     org.Ag.eg.db="Anopheles gambiae",
                   org.At.tair.db="Arabidopsis thaliana",
                   org.Bt.eg.db="Bos taurus",
                   org.Ce.eg.db="Caenorhabditis elegans",
-                  org.Cf.eg.db="Canis familiaris",
                   org.Dm.eg.db="Drosophila melanogaster",
                   org.Dr.eg.db="Danio rerio",
-                  org.Gg.eg.db="Gallus gallus domesticus",
-                  org.Hs.eg.db="Homo sapiens",
-                  org.Mm.eg.db="Mus musculus",
-                  org.Rn.eg.db="Rattus norvegicus",
                   org.Sc.sgd.db="Saccharomyces cerevisiae",
-                  org.Ss.eg.db="Sus domesticus",
                   org.Xl.eg.db="Xenopus laevis")
 
 db_annot_list <- reactive({
@@ -144,7 +149,7 @@ ht <- reactive({
   init <- ifelse(input$col_val=="none", 0, 1)
   m = matrix(init, nrow = length(all_terms), ncol = n)
   rownames(m) = all_terms
-  colnames(m) = names(lt())
+  names(m) = names(lt()) #millor names q colnames pq no doni problemes quan nomes hi ha una llista
 
   ##omplim amb pvalors o presencia/absencia
   for (i in 1:n) {
@@ -152,19 +157,21 @@ ht <- reactive({
   }
   m <- m[rownames(mat()),, drop=FALSE]
   if(input$col_val=="none" | input$col_val=="NES") transform <- function(x) x else transform <- function(x) -log10(x)
-  m = t(apply(m, 1, transform))
+  if (n>1) m = as.data.frame(t(apply(m, 1, transform)), stringsAsFactors=FALSE) else m=as.data.frame(transform(m), stringsAsFactors=FALSE)
+  names(m) = names(lt())
+  # if (n>1) m = t(apply(m, 1, transform)) else m[]=transform(m)
 
   if(input$col_val=="none") {
-    if (length(lt())<2) {
-      heatmap_param = list(
-        breaks = c(1), at=c(1), col = c("darkgreen"),
-        name = "", labels = c("available"), title="")
-      
-    } else {
+    # if (length(lt())<2) {
+    #   heatmap_param = list(
+    #     breaks = c(1), at=c(1), col = c("darkgreen"),
+    #     name = "", labels = c("available"), title="")
+    #   
+    # } else {
     heatmap_param = list(
       breaks = c(0, 1), at=c(0,1), col = c("gray", "darkgreen"),
       name = "", labels = c("not available", "available"), title="")
-    }
+    # }
   } else if (input$col_val=="NES"){
     heatmap_param = list(
       title=input$col_val, col=c("gray", "darkgreen"))
@@ -200,16 +207,21 @@ cl <- reactive({
 
 #Main Heatmap with wordCloud annotation
 hm <- reactive({
+  withProgress(message="Performing Heatmap with WordCloud...", value=0, {
   if (is.null(input$min_term)) min_term = round(nrow(mat()) * 0.02) else min_term=input$min_term
   term_desc <- structure(as.character(db_annot_df1()$term), names = as.character(db_annot_df1()$id)) #named vector
   if (is.null(ht())){
     simplifyEnrichment::ht_clusters(mat(), cl(), draw_word_cloud=TRUE, word_cloud_grob_param = list(max_width = 80), term=term_desc,
                                     order_by_size = TRUE, min_term=min_term)
+    
   } else { 
     simplifyEnrichment::ht_clusters(mat(), cl(), draw_word_cloud=TRUE, word_cloud_grob_param = list(max_width = 80), term=term_desc,
                                   order_by_size = TRUE, ht_list=ht(), min_term=min_term)
+    
   }
 })
+})
+
 output$hm <- renderPlot({hm()})
 
 #fem el dataframe
@@ -362,3 +374,87 @@ hm3 <- reactive({
 })
 
 output$hm3 <- renderPlot({hm3()})
+
+#Dotplot clusters
+##aggregate NES and pvalues by cluster in each comparison
+agg_stats <- c("pvalue", "p.adjust")
+stat_color <- reactive({input$col_pval})
+size_label_dotplot <- 10
+df_agg <- reactive({
+  df_agg <- df1() %>%
+  dplyr::select(cluster, starts_with(agg_stats)) %>%
+  group_by(cluster) %>%
+  dplyr::summarise_at(vars(starts_with(agg_stats)), list(agg=function(x) exp(mean(log(x), na.rm=TRUE)), numTerms= function(x) sum(complete.cases(x)))) %>%
+  left_join(dplyr::select(df1(), starts_with("cluster")), by="cluster") %>%
+  dplyr::select(c(starts_with("cluster"), ends_with("_agg"), starts_with(stat_color())&ends_with("_numTerms"))) %>%
+  unique()
+  colnames(df_agg) <- gsub("_agg", "__agg", colnames(df_agg))
+  colnames(df_agg) <- gsub("_numTerms", "__numTerms", colnames(df_agg))
+  return(df_agg)
+})
+
+#plot
+clustname <- reactive({switch(input$annot_type, annot_maxsetsize="cluster_annot_maxsetsize", annot_minpval="cluster_annot_minpval", none="cluster_annot_maxsetsize")})
+datgg_dotplot <- reactive({
+  comps <- names(lt())
+  datgg_dotplot <- df_agg() %>%
+  dplyr::select(clustname(), starts_with(stat_color()), ends_with("_numTerms")) %>%
+  pivot_longer(cols=!clustname(), names_to=c("comp", ".value"), names_sep="__", names_prefix=paste0(stat_color(), ".")) %>%
+  # mutate(ClusterName=factor(cluster_show_names, levels=rev(ann_cl))) %>%
+  mutate(comp=factor(comp, levels=comps), numTerms=ifelse(is.na(agg), NA, numTerms)) #sino els nas surten grisos
+  return(datgg_dotplot)
+} )
+dp <- reactive({
+  ggplot(datgg_dotplot(), aes_string(x = "comp", y = clustname())) + 
+  geom_point(aes(size = numTerms, color = agg)) +
+  theme_bw(base_size = size_label_dotplot) +
+  scale_colour_gradient(limits=c(0, input$pval_thr), low="red") +
+  scale_y_discrete(labels=function(x) stringr::str_wrap(x, width=45)) +
+  labs(y=NULL, x=NULL, color=paste0("agg ", stat_color()), size="number of terms") +
+  theme(axis.text.x=element_text(angle=45, hjust=1, size=12), axis.text.y=element_text(size=10)) 
+})
+
+output$dp <- renderPlot({dp()})
+output$df_agg <- DT::renderDataTable({DT::datatable(df_agg(), options=list(pageLength=5, scrollX=TRUE))})
+
+#Enrichment map via igraph+visNetwork (clusterprofiler: necessita enrichResult object)
+
+g <- reactive({
+    igraph::graph_from_adjacency_matrix(mat(), mode="undirected", weighted=TRUE, diag=FALSE)
+})
+visdata <- reactive({
+  visdata <- toVisNetworkData(g())
+  visdata$edges$value <- visdata$edges$weight
+  return(visdata)
+  })
+nodes <- reactive({
+  withProgress(message="Calculating clustering...", value=0, {
+    visdata <- visdata()
+    nodes <- visdata$nodes
+    cluster <- eval(parse(text=paste0(input$netw_clust_method,"(g())"))) #el weights es passa automatic si s'han calculat weights
+    
+    cluster_df <- data.frame(cluster_igraph=cluster$membership, id=cluster$name, stringsAsFactors=FALSE) 
+    nodes <- nodes %>%
+      left_join(.,cluster_df, by="id") %>%
+      left_join(., df1(), by="id")
+    nodes <- nodes %>%
+      mutate(group=factor(cluster_igraph, levels=as.character(1:max(nodes$cluster_igraph)))) %>%
+      arrange(group)
+    return(nodes)
+})
+})
+    
+edges <- reactive({visdata()$edges})
+ 
+output$netplot <- renderVisNetwork({
+  withProgress(message="Rendering Network...", value=0, {
+  visNetwork(nodes(), edges(), width = "100%") %>%
+    visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE,selectedBy = list(variable="group", multiple=TRUE)
+               # manipulation = list(enabled = TRUE, editEdgeCols = c("weight"), editNodeCols = c("id", "term"))
+    ) %>%
+    visIgraphLayout(layout=input$netw_layout, physics=FALSE, smooth=FALSE, randomSeed = 123)%>%
+    # visClusteringByGroup(groups = unique(nodes$group)) %>%
+    visLegend(stepY=50)
+})
+})   
+output$df_netw <- DT::renderDataTable({DT::datatable(nodes(), options=list(pageLength=5, scrollX=TRUE))})

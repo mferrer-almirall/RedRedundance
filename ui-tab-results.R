@@ -18,7 +18,9 @@ fluidRow(
            # tabPanel("Heatmap_left", plotOutput("ht")),
            tabPanel("Cluster comparison", plotOutput("plot_clust_comparison1"), plotOutput("plot_clust_comparison2")),
            tabPanel("Heatmap_WordCloud", plotOutput("hm"), DTOutput("df")),
-           tabPanel("Heatmap_Annot",plotOutput("hm3"), DTOutput("df1"))
+           tabPanel("Heatmap_Annot",plotOutput("hm3"), DTOutput("df1")),
+           tabPanel("Dotplot",plotOutput("dp"), DTOutput("df_agg")),
+           tabPanel("Network",visNetworkOutput("netplot"), DTOutput("df_netw"))
          ),
          fluidRow(
            bsCollapse(

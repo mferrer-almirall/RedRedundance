@@ -13,7 +13,7 @@ dashboardPage(
             style = "padding-top:10px; padding-bottom:10px;"),
           class = "dropdown"),
   
-  tags$li(a(href = 'http://vhir.org/portal1/',
+  tags$li(a(href = 'https://vhir.vallhebron.com/',
             img(src = 'vhir.png',
                 title = "VHIR", height = "30px"),
             style = "padding-top:10px; padding-bottom:10px;"),
@@ -24,8 +24,8 @@ dashboardPage(
     menuItem("Parameters", tabName = "options", icon = icon("cog")),
     menuItem("Input Data", tabName = "inputdata", icon = icon("upload")),
     menuItem("Filter and summary", tabName = "filterdata", icon = icon("filter")),
-    menuItem("Results", tabName = "results", icon = icon("object-group"))
-    # menuItem("Help", tabName = "help", icon = icon("question"))
+    menuItem("Results", tabName = "results", icon = icon("object-group")),
+    menuItem("About", tabName = "about", icon = icon("question"))
     )),
   
   dashboardBody(
@@ -45,23 +45,27 @@ dashboardPage(
         tabItem(tabName = "filterdata",
                 source("ui-tab-filterdata.R",local=TRUE)$value),
         tabItem(tabName = "results",
-                source("ui-tab-results.R",local=TRUE)$value)
-        # tabItem(tabName = "help",
-        #         source("ui-tab-help.R",local=TRUE)$value)
+                source("ui-tab-results.R",local=TRUE)$value),
+        tabItem(tabName = "about",
+                source("ui-tab-about.R",local=TRUE)$value)
       ),
       
       tags$hr(),
       
       ## FOOTER
       
-      # tags$footer(p(strong(a("Pol Castellano Escuder", href = "https://pcastellanoescuder.github.io"), ",",
-      #                      a("Francesc Carmona Pontaque", href = "https://sites.google.com/view/estbioinfo/home?authuser=0"), "and",
-      #                      a("Alex Sánchez Pla", href = "https://webgrec.ub.edu/webpages/000011/cat/asanchez.ub.edu.html")), align="center", width=3),
-      #             p("Statistics and Bioinformatics Research Group", align="center", width=3),
-      #             p(("University of Barcelona"), align="center", width=3),
+      # tags$footer(p(strong(a("Mireia Ferrer Almirall", 
+      #                        # href = "https://mferrer-almirall.github.io"),  
+      #                        "and",
+      #                      a("Alex Sánchez Pla", 
+      #                        # href = "https://webgrec.ub.edu/webpages/000011/cat/asanchez.ub.edu.html"
+      #                        )), 
+      #               align="center", width=3),
+      #             p("Statistics and Bioinformatics Unit", align="center", width=3),
+      #             p("Contact: mireia.ferrer.vhir@gmail.com"), align="center", width=3),
       #             p(("Copyright (C) 2021, app licensed under GPLv3"), align="center", width=4), align="center", width=4,
-      #             p(("Code available on Github:"),a("https://github.com/pcastellanoescuder/Covid19Explorer",
-      #                                               href="https://github.com/pcastellanoescuder/Covid19Explorer"))),
+      #             p(("Code available on Github:"),a("https://github.com/mferrer-almirall/RedRedundance",
+      #                                               href="https://github.com/mferrer-almirall/RedRedundance"))),
       
       ## GOOGLE ANALYTICS
       
