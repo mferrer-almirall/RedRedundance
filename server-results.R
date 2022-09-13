@@ -211,11 +211,11 @@ hm <- reactive({
   if (is.null(input$min_term)) min_term = round(nrow(mat()) * 0.02) else min_term=input$min_term
   term_desc <- structure(as.character(db_annot_df1()$term), names = as.character(db_annot_df1()$id)) #named vector
   if (is.null(ht())){
-    simplifyEnrichment::ht_clusters(mat(), cl(), draw_word_cloud=TRUE, word_cloud_grob_param = list(max_width = 80), term=term_desc,
+     ht_clusters_1.1.5(mat(), cl(), draw_word_cloud=TRUE, word_cloud_grob_param = list(max_width = 80), term=term_desc,
                                     order_by_size = TRUE, min_term=min_term)
     
   } else { 
-    simplifyEnrichment::ht_clusters(mat(), cl(), draw_word_cloud=TRUE, word_cloud_grob_param = list(max_width = 80), term=term_desc,
+     ht_clusters_1.1.5(mat(), cl(), draw_word_cloud=TRUE, word_cloud_grob_param = list(max_width = 80), term=term_desc,
                                   order_by_size = TRUE, ht_list=ht(), min_term=min_term)
     
   }
@@ -253,7 +253,7 @@ df1 <- reactive({
     df1_c <- df1 %>%
       dplyr::filter(cluster==c)
     #anotacio amb wordcloud
-    word_clouds_annotations <- simplifyEnrichment::count_word(df1_c$term)
+    word_clouds_annotations <- simplifyEnrichment::count_words(df1_c$term)
     words_f <- na.omit(word_clouds_annotations$word[1:input$num_words_wc])
     df1[df1$cluster==c, "cluster_annot_wordcloud"] <- paste0(words_f, collapse=" ")
     #anotacio amb term with min pval in any of comparisons

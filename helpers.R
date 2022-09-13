@@ -12,6 +12,7 @@ library(plotly)
 library(reactome.db) #to map reactome ids to terms
 library(AnnotationDbi)
 library(ComplexHeatmap)
-# library(simplifyEnrichment)
+library(simplifyEnrichment)
 library(visNetwork)
 library(igraph)
+source(here::here("r", "ht_clusters_1.1.5.R"))
