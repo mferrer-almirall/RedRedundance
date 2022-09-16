@@ -142,7 +142,7 @@ lt <- reactive({
 })
 
 ht <- reactive({
-  req(length(lt())>1)
+  req(length(lt())>=1)
   withProgress(message="Calculating left heatmap...", value=0, {
   all_terms <- unique(unlist(lapply(lt(), names)))
   n <- length(lt())
@@ -157,21 +157,21 @@ ht <- reactive({
   }
   m <- m[rownames(mat()),, drop=FALSE]
   if(input$col_val=="none" | input$col_val=="NES") transform <- function(x) x else transform <- function(x) -log10(x)
-  if (n>1) m = as.data.frame(t(apply(m, 1, transform)), stringsAsFactors=FALSE) else m=as.data.frame(transform(m), stringsAsFactors=FALSE)
-  names(m) = names(lt())
+  if (n>1) m = t(apply(m, 1, transform)) else m=transform(m)
+  colnames(m) = names(lt())
   # if (n>1) m = t(apply(m, 1, transform)) else m[]=transform(m)
 
-  if(input$col_val=="none") {
-    # if (length(lt())<2) {
-    #   heatmap_param = list(
-    #     breaks = c(1), at=c(1), col = c("darkgreen"),
-    #     name = "", labels = c("available"), title="")
-    #   
-    # } else {
+  if (input$col_val=="none") {
+    if (length(lt())<2) {
+      heatmap_param = list(
+        breaks = c(1), at=c(1), col = c("darkgreen"),
+        name = "", labels = c("available"), title="")
+
+    } else {
     heatmap_param = list(
       breaks = c(0, 1), at=c(0,1), col = c("gray", "darkgreen"),
       name = "", labels = c("not available", "available"), title="")
-    # }
+    }
   } else if (input$col_val=="NES"){
     heatmap_param = list(
       title=input$col_val, col=c("gray", "darkgreen"))
@@ -259,7 +259,7 @@ df1 <- reactive({
     #anotacio amb term with min pval in any of comparisons
     if (input$annot_type=="annot_minpval") {
       cols_pval <- colnames(df1_c)[grepl(paste0("^",input$col_pval), colnames(df1_c))]
-      pval_min <- apply(df1_c[,cols_pval],1,min, na.rm=TRUE)
+      if (length(lt())>1) pval_min <- apply(df1_c[,cols_pval],1,min, na.rm=TRUE) else pval_min <- df1_c[,cols_pval]
       names(pval_min) <- df1_c$id
       anot_minpval <- names(pval_min)[which.min(pval_min)]
       anot_minpval1 <- as.character(df1_c[df1_c$id==anot_minpval,"term"])
